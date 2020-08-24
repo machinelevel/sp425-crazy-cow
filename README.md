@@ -21,3 +21,9 @@ I use my reMarkable tablet every day, for work and for personal stuff. I've spen
 2. **Strobe** - Mosy digital displays strobe and flicker at a very high rate. Ink displays don't do this.
 3. **Speed** - Ink displays are slow. I see this as a good thing.
 
+## Installation instructions
+1. copy **crazy-cow.service** to **/etc/systemd/system/**
+2. copy **crazy-cow** to **/home/root/**
+3. `ssh` to the tablet
+4. `systemctl start crazy-cow`
+5. `systemctl enable crazy-cow` (to enable on boot)
