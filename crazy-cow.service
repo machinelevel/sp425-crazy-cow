@@ -1,0 +1,14 @@
+[Unit]
+Description=SP245 Crazy Cow Ink Lettering
+#StartLimitIntervalSec=600
+#StartLimitBurst=4
+After=home.mount
+
+[Service]
+Environment=HOME=/home/root
+ExecStart=/home/root/crazy-cow
+
+[Install]
+WantedBy=multi-user.target
+
+
