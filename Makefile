@@ -23,12 +23,9 @@ OBJECTS_DIR   = obj/
 
 ####### Files
 
-SOURCES       = main.cpp
-OBJECTS       = obj/main.o
+SOURCES       = main.cpp hershey-fonts.cpp
+OBJECTS       = obj/main.o obj/hershey-fonts.o
 
-DIST          = main.cpp
-QMAKE_TARGET  = crazy-cow
-DESTDIR       = bin/
 TARGET        = bin/crazy-cow
 
 $(TARGET): $(OBJECTS)  
@@ -46,3 +43,7 @@ clean:
 obj/main.o: main.cpp ccow.h
 	@test -d obj/ || mkdir -p obj/
 	$(CC) -c $(CFLAGS) $(INCPATH) -o obj/main.o main.cpp
+
+obj/hershey-fonts.o: hershey-fonts.cpp ccow.h
+	@test -d obj/ || mkdir -p obj/
+	$(CC) -c $(CFLAGS) $(INCPATH) -o obj/hershey-fonts.o hershey-fonts.cpp

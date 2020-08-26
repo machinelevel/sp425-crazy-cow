@@ -30,7 +30,8 @@
 // evt struct: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/input.h
 // evt codes: https://www.kernel.org/doc/Documentation/input/event-codes.txt
 // fonts: http://www.imajeenyus.com/computer/20150110_single_line_fonts/index.shtml
-// hershey text: https://wiki.evilmadscientist.com/Hershey_Text
+// Hershey text: https://wiki.evilmadscientist.com/Hershey_Text
+// Raw Hershey font files: https://emergent.unpythonic.net/software/hershey
 
 ////////////////////////////////////////////////////////////////////////////
 // Work in progress, not yet ready to be used.
@@ -40,8 +41,11 @@
 static int keyboard = -1;
 static int wacom = -1;
 static int line_height = 800;
+static int font_scale = 30;
 static int cursor_x = limit_left;
 static int cursor_y = limit_top;
+static int left_shift = 0;
+static int right_shift = 0;
 
 void send_wacom_event(int type, int code, int value)
 {
@@ -53,38 +57,36 @@ void send_wacom_event(int type, int code, int value)
     write(wacom, &evt, sizeof(evt));
 }
 
-void wacom_char()
+void wacom_char(char ascii_value)
 {
-    int strokes[] = {0, 0, 100, 100, 200, 0, -1000, -1000, 50, 50, 150, 50, -2000, -2000};
+    int num_strokes = 0;
+    int char_width = 0;
+    const int8_t* stroke_data = get_font_char("hershey_font_simplex", ascii_value, num_strokes, char_width);
+    if (!stroke_data)
+        return;
+    printf("Ascii %d ('%c'): %d strokes, %d width : ", ascii_value, ascii_value, num_strokes, char_width);
+//    int strokes[] = {0, 0, 100, 100, 200, 0, -1000, -1000, 50, 50, 150, 50, -2000, -2000};
     send_wacom_event(EV_KEY, BTN_TOOL_PEN, 1);
-    bool done = false;
     bool pen_down = false;
-    const int* seg = strokes;
-    int x_max = 0;
-    while (!done)
+    for (int8_t i = 0; i < num_strokes; ++i)
     {
-        int x = *seg++;
-        int y = *seg++;
-        if (x == -2000 && y == -2000)
+        int x = *stroke_data++;
+        int y = *stroke_data++;
+        printf("%d,%d   ", x, y);
+        if (x == -1 && y == -1)
         {
-            done = true;
-        }
-        else if (x == -1000 && y == -1000)
-        {
-            // if (pen_down)
-            // {
-            //     send_wacom_event(EV_KEY, BTN_TOUCH, 0);
-            //     send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
-            //     send_wacom_event(0, 0, 0);
-            //     pen_down = false;
-            // }
+            if (pen_down)
+            {
+                send_wacom_event(EV_KEY, BTN_TOUCH, 0);
+                send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
+                send_wacom_event(0, 0, 0);
+                pen_down = false;
+            }
         }
         else
         {
-            x *= 4;
-            y *= 4;
-            if (x_max < x)
-                x_max = x;
+            x *= font_scale;
+            y *= font_scale;
             send_wacom_event(EV_ABS, ABS_X, cursor_y + y);
             send_wacom_event(EV_ABS, ABS_Y, cursor_x + x);
             send_wacom_event(0, 0, 0);
@@ -103,6 +105,7 @@ void wacom_char()
             }
         }
     }
+    printf("\n");
     if (pen_down)
     {
         send_wacom_event(EV_KEY, BTN_TOUCH, 0);
@@ -110,16 +113,13 @@ void wacom_char()
     }
     send_wacom_event(EV_KEY, BTN_TOOL_PEN, 0);
     send_wacom_event(0, 0, 0);
-    if (x_max > 0)
+
+    cursor_x += font_scale * char_width;
+    if (cursor_x > limit_right)
     {
-        cursor_x += x_max + 100;
-        if (cursor_x > limit_right)
-        {
-            cursor_x = limit_left;
-            if (cursor_y > limit_bottom)
-                cursor_y -= line_height;
-        }
-        printf("x: %d y: %d\n", cursor_x, cursor_y);
+        cursor_x = limit_left;
+        if (cursor_y > limit_bottom)
+            cursor_y -= line_height;
     }
 }
 
@@ -127,15 +127,30 @@ void handle_event(const struct input_event* evt)
 {
     if (evt->type == EV_KEY)
     {
-        if (evt->value) // it's a key-down, not a key-up
+        if (evt->code == KEY_LEFTSHIFT)
         {
-            if (evt->code == KEY_A)
-                wacom_char();
-            else if (evt->code == KEY_ENTER)
+            left_shift = evt->value;
+        }
+        else if (evt->code == KEY_LEFTSHIFT)
+        {
+            right_shift = evt->value;
+        }
+        else if (evt->code == KEY_ENTER)
+        {
+            if (evt->value) // key down
             {
                 cursor_x = limit_left;
                 if (cursor_y > limit_bottom)
                     cursor_y -= line_height;
+            }
+        }
+        else
+        {
+            if (evt->value) // key down
+            {
+                char ascii = keycode_to_ascii(evt->code, left_shift | right_shift);
+                if (ascii)
+                    wacom_char(ascii);
             }
         }
     }
