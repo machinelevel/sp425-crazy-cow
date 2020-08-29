@@ -31,58 +31,63 @@ const int8_t* get_font_char(const char* font_name, char ascii_value, int& out_nu
     return NULL;
 }
 
-char keycode_to_ascii(int keycode, bool shifted)
+char keycode_to_ascii(int keycode, int mods)
 {
+    if (mods & (MOD_CTRL|MOD_ALT))
+    {
+        // Do whatever we want here. Maybe launch VNC?
+        return 0;
+    }
     switch (keycode)
     {
-        case KEY_SEMICOLON:  return (shifted) ? ';' : ':'; break;
-        case KEY_LEFTBRACE:  return (shifted) ? '[' : '{'; break;
-        case KEY_RIGHTBRACE: return (shifted) ? ']' : '}'; break;
-        case KEY_MINUS:      return (shifted) ? '-' : '_'; break;
-        case KEY_EQUAL:      return (shifted) ? '=' : '+'; break;
-        case KEY_APOSTROPHE: return (shifted) ? '\'' : '\"'; break;
-        case KEY_GRAVE:      return (shifted) ? '`' : '~'; break;
-        case KEY_BACKSLASH:  return (shifted) ? '\\' : '|'; break;
-        case KEY_COMMA:      return (shifted) ? ',' : '<'; break;
-        case KEY_DOT:        return (shifted) ? '.' : '>'; break;
-        case KEY_SLASH:      return (shifted) ? '/' : '?'; break;
-        case KEY_SPACE:      return (shifted) ? ' ' : ' '; break;
-        case KEY_0: return (shifted) ? ')' : '0'; break;
-        case KEY_1: return (shifted) ? '!' : '1'; break;
-        case KEY_2: return (shifted) ? '@' : '2'; break;
-        case KEY_3: return (shifted) ? '#' : '3'; break;
-        case KEY_4: return (shifted) ? '$' : '4'; break;
-        case KEY_5: return (shifted) ? '%' : '5'; break;
-        case KEY_6: return (shifted) ? '^' : '6'; break;
-        case KEY_7: return (shifted) ? '&' : '7'; break;
-        case KEY_8: return (shifted) ? '*' : '8'; break;
-        case KEY_9: return (shifted) ? '(' : '9'; break;
-        case KEY_A: return (shifted) ? 'A' : 'a'; break;
-        case KEY_B: return (shifted) ? 'B' : 'b'; break;
-        case KEY_C: return (shifted) ? 'C' : 'c'; break;
-        case KEY_D: return (shifted) ? 'D' : 'd'; break;
-        case KEY_E: return (shifted) ? 'E' : 'e'; break;
-        case KEY_F: return (shifted) ? 'F' : 'f'; break;
-        case KEY_G: return (shifted) ? 'G' : 'g'; break;
-        case KEY_H: return (shifted) ? 'H' : 'h'; break;
-        case KEY_I: return (shifted) ? 'I' : 'i'; break;
-        case KEY_J: return (shifted) ? 'J' : 'j'; break;
-        case KEY_K: return (shifted) ? 'K' : 'k'; break;
-        case KEY_L: return (shifted) ? 'L' : 'l'; break;
-        case KEY_M: return (shifted) ? 'M' : 'm'; break;
-        case KEY_N: return (shifted) ? 'N' : 'n'; break;
-        case KEY_O: return (shifted) ? 'O' : 'o'; break;
-        case KEY_P: return (shifted) ? 'P' : 'p'; break;
-        case KEY_Q: return (shifted) ? 'Q' : 'q'; break;
-        case KEY_R: return (shifted) ? 'R' : 'r'; break;
-        case KEY_S: return (shifted) ? 'S' : 's'; break;
-        case KEY_T: return (shifted) ? 'T' : 't'; break;
-        case KEY_U: return (shifted) ? 'U' : 'u'; break;
-        case KEY_V: return (shifted) ? 'V' : 'v'; break;
-        case KEY_W: return (shifted) ? 'W' : 'w'; break;
-        case KEY_X: return (shifted) ? 'X' : 'x'; break;
-        case KEY_Y: return (shifted) ? 'Y' : 'y'; break;
-        case KEY_Z: return (shifted) ? 'Z' : 'z'; break;
+        case KEY_SEMICOLON:  return (mods & MOD_SHIFT) ? ':' : ';'; break;
+        case KEY_LEFTBRACE:  return (mods & MOD_SHIFT) ? '{' : '['; break;
+        case KEY_RIGHTBRACE: return (mods & MOD_SHIFT) ? '}' : ']'; break;
+        case KEY_MINUS:      return (mods & MOD_SHIFT) ? '_' : '-'; break;
+        case KEY_EQUAL:      return (mods & MOD_SHIFT) ? '+' : '='; break;
+        case KEY_APOSTROPHE: return (mods & MOD_SHIFT) ? '\"' : '\''; break;
+        case KEY_GRAVE:      return (mods & MOD_SHIFT) ? '~' : '`'; break;
+        case KEY_BACKSLASH:  return (mods & MOD_SHIFT) ? '|' : '\\'; break;
+        case KEY_COMMA:      return (mods & MOD_SHIFT) ? '<' : ','; break;
+        case KEY_DOT:        return (mods & MOD_SHIFT) ? '>' : '.'; break;
+        case KEY_SLASH:      return (mods & MOD_SHIFT) ? '?' : '/'; break;
+        case KEY_SPACE:      return ' '; break;
+        case KEY_0: return (mods & MOD_SHIFT) ? ')' : '0'; break;
+        case KEY_1: return (mods & MOD_SHIFT) ? '!' : '1'; break;
+        case KEY_2: return (mods & MOD_SHIFT) ? '@' : '2'; break;
+        case KEY_3: return (mods & MOD_SHIFT) ? '#' : '3'; break;
+        case KEY_4: return (mods & MOD_SHIFT) ? '$' : '4'; break;
+        case KEY_5: return (mods & MOD_SHIFT) ? '%' : '5'; break;
+        case KEY_6: return (mods & MOD_SHIFT) ? '^' : '6'; break;
+        case KEY_7: return (mods & MOD_SHIFT) ? '&' : '7'; break;
+        case KEY_8: return (mods & MOD_SHIFT) ? '*' : '8'; break;
+        case KEY_9: return (mods & MOD_SHIFT) ? '(' : '9'; break;
+        case KEY_A: return (mods & MOD_CAPS) ? 'A' : 'a'; break;
+        case KEY_B: return (mods & MOD_CAPS) ? 'B' : 'b'; break;
+        case KEY_C: return (mods & MOD_CAPS) ? 'C' : 'c'; break;
+        case KEY_D: return (mods & MOD_CAPS) ? 'D' : 'd'; break;
+        case KEY_E: return (mods & MOD_CAPS) ? 'E' : 'e'; break;
+        case KEY_F: return (mods & MOD_CAPS) ? 'F' : 'f'; break;
+        case KEY_G: return (mods & MOD_CAPS) ? 'G' : 'g'; break;
+        case KEY_H: return (mods & MOD_CAPS) ? 'H' : 'h'; break;
+        case KEY_I: return (mods & MOD_CAPS) ? 'I' : 'i'; break;
+        case KEY_J: return (mods & MOD_CAPS) ? 'J' : 'j'; break;
+        case KEY_K: return (mods & MOD_CAPS) ? 'K' : 'k'; break;
+        case KEY_L: return (mods & MOD_CAPS) ? 'L' : 'l'; break;
+        case KEY_M: return (mods & MOD_CAPS) ? 'M' : 'm'; break;
+        case KEY_N: return (mods & MOD_CAPS) ? 'N' : 'n'; break;
+        case KEY_O: return (mods & MOD_CAPS) ? 'O' : 'o'; break;
+        case KEY_P: return (mods & MOD_CAPS) ? 'P' : 'p'; break;
+        case KEY_Q: return (mods & MOD_CAPS) ? 'Q' : 'q'; break;
+        case KEY_R: return (mods & MOD_CAPS) ? 'R' : 'r'; break;
+        case KEY_S: return (mods & MOD_CAPS) ? 'S' : 's'; break;
+        case KEY_T: return (mods & MOD_CAPS) ? 'T' : 't'; break;
+        case KEY_U: return (mods & MOD_CAPS) ? 'U' : 'u'; break;
+        case KEY_V: return (mods & MOD_CAPS) ? 'V' : 'v'; break;
+        case KEY_W: return (mods & MOD_CAPS) ? 'W' : 'w'; break;
+        case KEY_X: return (mods & MOD_CAPS) ? 'X' : 'x'; break;
+        case KEY_Y: return (mods & MOD_CAPS) ? 'Y' : 'y'; break;
+        case KEY_Z: return (mods & MOD_CAPS) ? 'Z' : 'z'; break;
         default: return 0; break;
     }
 }
@@ -424,7 +429,7 @@ int8_t hershey_font_simplex[95*112] = {
    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-    5,20, /* Ascii 88 */
+    5,20, /* Ascii 88 X */
     3,21,17, 0,-1,-1,17,21, 3, 0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,

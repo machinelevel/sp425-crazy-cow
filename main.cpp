@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <linux/input.h>
+#include <vector>
 #include "ccow.h"
 
 // Some useful references
@@ -46,6 +47,25 @@ static int cursor_x = limit_left;
 static int cursor_y = limit_top;
 static int left_shift = 0;
 static int right_shift = 0;
+static int left_ctrl = 0;
+static int right_ctrl = 0;
+static int left_alt = 0;
+static int right_alt = 0;
+static int caps_lock = 0;
+// static float stylus_x = 0;
+// static float stylus_y = 0;
+
+std::vector<struct input_event> pending_events;
+
+void finish_wacom_events()
+{
+    if (pending_events.size())
+    {
+        write(wacom, &pending_events[0], pending_events.size() * sizeof(pending_events[0]));
+        fsync(wacom);
+        pending_events.clear();
+    }
+}
 
 void send_wacom_event(int type, int code, int value)
 {
@@ -54,7 +74,8 @@ void send_wacom_event(int type, int code, int value)
     evt.type = type;
     evt.code = code;
     evt.value = value;
-    write(wacom, &evt, sizeof(evt));
+    pending_events.push_back(evt);
+    finish_wacom_events();
 }
 
 void wacom_char(char ascii_value)
@@ -64,56 +85,109 @@ void wacom_char(char ascii_value)
     const int8_t* stroke_data = get_font_char("hershey_font_simplex", ascii_value, num_strokes, char_width);
     if (!stroke_data)
         return;
+
+    const int8_t test_star[] = {
+//        10,10, 10-1,10, 10,10-1, 10+1,10, 10,10+1, 10-1,10, -1,-1,
+
+        10,10, 10-10,10   , -1,-1,
+        10,10, 10+10,10   , -1,-1,
+        10,10, 10   ,10-10, -1,-1,
+        10,10, 10   ,10+10, -1,-1,
+
+        10,10, 10-10,10-10, -1,-1,
+        10,10, 10+10,10+10, -1,-1,
+        10,10, 10+10,10-10, -1,-1,
+        10,10, 10-10,10+10, -1,-1,
+
+        10,10, 10-5,10-10, -1,-1,
+        10,10, 10+5,10+10, -1,-1,
+        10,10, 10+5,10-10, -1,-1,
+        10,10, 10-5,10+10, -1,-1,
+
+        10,10, 10-10,10-5, -1,-1,
+        10,10, 10+10,10+5, -1,-1,
+        10,10, 10+10,10-5, -1,-1,
+        10,10, 10-10,10+5, -1,-1,
+    };
+    stroke_data = test_star;
+    num_strokes = (sizeof(test_star) / sizeof(test_star[0])) / 2;
+    char_width = 35;
+
     printf("Ascii %d ('%c'): %d strokes, %d width : ", ascii_value, ascii_value, num_strokes, char_width);
 //    int strokes[] = {0, 0, 100, 100, 200, 0, -1000, -1000, 50, 50, 150, 50, -2000, -2000};
-    send_wacom_event(EV_KEY, BTN_TOOL_PEN, 1);
-    bool pen_down = false;
-    for (int8_t i = 0; i < num_strokes; ++i)
-    {
-        int x = *stroke_data++;
-        int y = *stroke_data++;
-        printf("%d,%d   ", x, y);
-        if (x == -1 && y == -1)
-        {
-            if (pen_down)
-            {
-                send_wacom_event(EV_KEY, BTN_TOUCH, 0);
-                send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
-                send_wacom_event(0, 0, 0);
-                pen_down = false;
-            }
-        }
-        else
-        {
-            x *= font_scale;
-            y *= font_scale;
-            send_wacom_event(EV_ABS, ABS_X, cursor_y + y);
-            send_wacom_event(EV_ABS, ABS_Y, cursor_x + x);
-            send_wacom_event(0, 0, 0);
-            if (!pen_down)
-            {
-                send_wacom_event(EV_KEY, BTN_TOUCH, 1);
-                send_wacom_event(EV_ABS, ABS_PRESSURE, 3288);
-                send_wacom_event(EV_ABS, ABS_DISTANCE, 8);
-                send_wacom_event(EV_ABS, ABS_TILT_X, -2600);
-                send_wacom_event(EV_ABS, ABS_TILT_Y, 3500);
-                send_wacom_event(0, 0, 0);
-                send_wacom_event(EV_ABS, ABS_X, cursor_y + y);
-                send_wacom_event(EV_ABS, ABS_Y, cursor_x + x);
-                send_wacom_event(0, 0, 0);
-                pen_down = true;
-            }
-        }
-    }
-    printf("\n");
-    if (pen_down)
-    {
-        send_wacom_event(EV_KEY, BTN_TOUCH, 0);
-        send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
-    }
-    send_wacom_event(EV_KEY, BTN_TOOL_PEN, 0);
-    send_wacom_event(0, 0, 0);
 
+    if (num_strokes > 0)
+    {
+        send_wacom_event(EV_KEY, BTN_TOOL_PEN, 1);
+send_wacom_event(0, 0, 0);
+finish_wacom_events();
+usleep(250 * 1000);
+        bool pen_down = false;
+        float x = 0;
+        float y = 0;
+        for (int8_t stroke_index = 0; stroke_index < num_strokes; ++stroke_index)
+        {
+            int dx = *stroke_data++;
+            int dy = *stroke_data++;
+            printf("%d,%d   ", dx, dy);
+            if (dx == -1 && dy == -1)
+            {
+                if (pen_down)
+                {
+//                    pos_defilter(x, y);
+                    send_wacom_event(EV_ABS, ABS_X, (int)y);
+                    send_wacom_event(EV_ABS, ABS_Y, (int)x);
+                    send_wacom_event(EV_KEY, BTN_TOUCH, 0);
+                    send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
+                    send_wacom_event(0, 0, 0);
+                    finish_wacom_events();
+finish_wacom_events();
+usleep(250 * 1000);
+                    pen_down = false;
+                }
+            }
+            else
+            {
+                x = (float)dx * font_scale + cursor_x;
+                y = (float)dy * font_scale + cursor_y;
+                for (int iter = 0; iter < 2; ++iter)
+                {
+                    send_wacom_event(EV_ABS, ABS_X, (int)y);
+                    send_wacom_event(EV_ABS, ABS_Y, (int)x);
+                    send_wacom_event(EV_ABS, ABS_PRESSURE, 3288);
+                    send_wacom_event(EV_ABS, ABS_DISTANCE, 8);
+                    send_wacom_event(EV_ABS, ABS_TILT_X, -2600);
+                    send_wacom_event(EV_ABS, ABS_TILT_Y, 3500);
+                    send_wacom_event(0, 0, 0);
+                    finish_wacom_events();
+                    if (!pen_down && iter == 0)
+                    {
+                        send_wacom_event(EV_KEY, BTN_TOUCH, 1);
+                        send_wacom_event(0, 0, 0);
+                        finish_wacom_events();
+finish_wacom_events();
+usleep(250 * 1000);
+                        pen_down = true;
+                    }
+                }
+            }
+        }
+        printf("\n");
+        if (pen_down)
+        {
+            send_wacom_event(EV_ABS, ABS_X, (int)y);
+            send_wacom_event(EV_ABS, ABS_Y, (int)x);
+            send_wacom_event(EV_KEY, BTN_TOUCH, 0);
+            send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
+finish_wacom_events();
+usleep(250 * 1000);
+        }
+        send_wacom_event(EV_KEY, BTN_TOOL_PEN, 0);
+        send_wacom_event(0, 0, 0);
+        finish_wacom_events();
+finish_wacom_events();
+usleep(250 * 1000);
+    }
     cursor_x += font_scale * char_width;
     if (cursor_x > limit_right)
     {
@@ -127,31 +201,44 @@ void handle_event(const struct input_event* evt)
 {
     if (evt->type == EV_KEY)
     {
-        if (evt->code == KEY_LEFTSHIFT)
+        switch (evt->code)
         {
-            left_shift = evt->value;
-        }
-        else if (evt->code == KEY_LEFTSHIFT)
-        {
-            right_shift = evt->value;
-        }
-        else if (evt->code == KEY_ENTER)
-        {
+        case KEY_LEFTSHIFT:  left_shift  = evt->value; break;
+        case KEY_RIGHTSHIFT: right_shift = evt->value; break;
+        case KEY_LEFTCTRL:   left_ctrl   = evt->value; break;
+        case KEY_RIGHTCTRL:  right_ctrl  = evt->value; break;
+        case KEY_LEFTALT:    left_alt    = evt->value; break;
+        case KEY_RIGHTALT:   right_alt   = evt->value; break;
+        case KEY_CAPSLOCK:
+            if (!evt->value)
+                caps_lock = !caps_lock;
+            break;
+        case KEY_ENTER:
             if (evt->value) // key down
             {
                 cursor_x = limit_left;
                 if (cursor_y > limit_bottom)
                     cursor_y -= line_height;
             }
-        }
-        else
-        {
+            break;
+        default:
             if (evt->value) // key down
             {
-                char ascii = keycode_to_ascii(evt->code, left_shift | right_shift);
+                printf("key, sh=%d\n", (int)(left_shift | right_shift));
+                int modifiers = 0;
+                if (left_shift | right_shift | caps_lock)
+                    modifiers |= MOD_CAPS;
+                if (left_shift | right_shift)
+                    modifiers |= MOD_SHIFT;
+                if (left_ctrl | right_ctrl)
+                    modifiers |= MOD_CTRL;
+                if (left_alt | right_alt)
+                    modifiers |= MOD_ALT;
+                char ascii = keycode_to_ascii(evt->code, modifiers);
                 if (ascii)
                     wacom_char(ascii);
             }
+            break;
         }
     }
     else
@@ -165,7 +252,7 @@ void handle_keys()
     struct input_event evt;
 
     keyboard = open(EXTERNAL_USB_KEYBOARD, O_RDONLY);
-    wacom = open(WACOM, O_RDWR);
+    wacom = open(WACOM, O_WRONLY);
     if (!keyboard)
     {
         fprintf(stderr, "cannot open keyboard");
