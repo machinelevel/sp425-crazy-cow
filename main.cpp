@@ -109,9 +109,81 @@ void wacom_char(char ascii_value)
         10,10, 10+10,10-5, -1,-1,
         10,10, 10-10,10+5, -1,-1,
     };
+    const int8_t test_x[] = {
+        10-5,10-10, 10+5,10+10, -1,-1,
+        10+5,10-10, 10-5,10+10, -1,-1,
+    };
+    const int8_t test_x2[] = { // 4 spokes outside in
+        10-5,10-10, 10,10, -1,-1,
+        10+5,10-10, 10,10, -1,-1,
+        10+5,10+10, 10,10, -1,-1,
+        10-5,10+10, 10,10, -1,-1,
+    };
+    const int8_t test_x3[] = { // 4 spokes inside out
+        10,10, 10-5,10-10, -1,-1,
+        10,10, 10+5,10-10, -1,-1,
+        10,10, 10+5,10+10, -1,-1,
+        10,10, 10-5,10+10, -1,-1,
+    };
+
+    const int8_t test_x4[] = { // 4 spokes outside in
+        10,10, 10-1,10, 10,10-1, 10+1,10, 10,10+1, 10-1,10, -1,-1,
+        10+5,10-10, 10+5-1,10-10, 10+5,10-10-1, 10+5+1,10-10, 10+5,10-10+1, 10+5-1,10-10, -1,-1,
+//        10-5,10-10, 10,10, -1,-1,
+        10+5,10-10, 10,10, -1,-1,
+    };
+    const int8_t test_x5[] = { // 4 spokes inside out
+        10,10, 10-1,10, 10,10-1, 10+1,10, 10,10+1, 10-1,10, -1,-1,
+        10+5,10-10, 10+5-1,10-10, 10+5,10-10-1, 10+5+1,10-10, 10+5,10-10+1, 10+5-1,10-10, -1,-1,
+//        10,10, 10-5,10-10, -1,-1,
+        10,10, 10+5,10-10, -1,-1,
+    };
+    const int8_t test_x6[] = { // 4 spokes outside in
+        10-5,10+10, 10,10, -1,-1,
+        10+5,10+10, 10,10, -1,-1,
+    };
+    const int8_t test_x7[] = { // 4 spokes inside out
+        10,10, 10-5,10+10, -1,-1,
+        10,10, 10+5,10+10, -1,-1,
+    };
+    char_width = 35;
     stroke_data = test_star;
     num_strokes = (sizeof(test_star) / sizeof(test_star[0])) / 2;
-    char_width = 35;
+    if (ascii_value == 'x')
+    {
+        stroke_data = test_x;
+        num_strokes = (sizeof(test_x) / sizeof(test_x[0])) / 2;
+    }
+    else if (ascii_value == 'c')
+    {
+        stroke_data = test_x2;
+        num_strokes = (sizeof(test_x2) / sizeof(test_x2[0])) / 2;
+    }
+    else if (ascii_value == 'v')
+    {
+        stroke_data = test_x3;
+        num_strokes = (sizeof(test_x3) / sizeof(test_x3[0])) / 2;
+    }
+    else if (ascii_value == 'b')
+    {
+        stroke_data = test_x4;
+        num_strokes = (sizeof(test_x4) / sizeof(test_x4[0])) / 2;
+    }
+    else if (ascii_value == 'n')
+    {
+        stroke_data = test_x5;
+        num_strokes = (sizeof(test_x5) / sizeof(test_x5[0])) / 2;
+    }
+    else if (ascii_value == 'm')
+    {
+        stroke_data = test_x6;
+        num_strokes = (sizeof(test_x6) / sizeof(test_x6[0])) / 2;
+    }
+    else if (ascii_value == ',')
+    {
+        stroke_data = test_x7;
+        num_strokes = (sizeof(test_x7) / sizeof(test_x7[0])) / 2;
+    }
 
     printf("Ascii %d ('%c'): %d strokes, %d width : ", ascii_value, ascii_value, num_strokes, char_width);
 //    int strokes[] = {0, 0, 100, 100, 200, 0, -1000, -1000, 50, 50, 150, 50, -2000, -2000};
