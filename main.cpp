@@ -41,8 +41,8 @@
 
 static int keyboard = -1;
 static int wacom = -1;
-static int line_height = 800;
-static int font_scale = 30;
+static int line_height = 30;
+static int font_scale = 30 * 5;
 static int cursor_x = limit_left;
 static int cursor_y = limit_top;
 static int left_shift = 0;
@@ -191,12 +191,99 @@ void condition_strokes3(const int8_t* stroke_data, int num_strokes, std::vector<
                 fstrokes.push_back(last_raw_y);
                 fstrokes.push_back(mod_x);
                 fstrokes.push_back(mod_y);
-                fstrokes.push_back(-1);
-                fstrokes.push_back(-1);
             }
+        }
+        else
+        {
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
         }
         last_raw_x = raw_x;
         last_raw_y = raw_y;
+    }    
+}
+
+void condition_strokes_debug(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
+{
+    // The reMarkable strokes problem is that the pen travels too far while down.
+    // This version fixes the problem by scaling down the distance traveled in each
+    // segment by a constant factor.
+    float scale_down = 2.0 / 3.0;
+    float last_raw_x = -1;
+    float last_raw_y = -1;
+    float last_mod_x = -1;
+    float last_mod_y = -1;
+
+    // Draw dots
+    float dot_scale = 0.2;
+    for (int i = 0; i < num_strokes; ++i)
+    {
+        float raw_x = stroke_data[2 * i + 0];
+        float raw_y = stroke_data[2 * i + 1];
+        if (raw_x != -1 || raw_y != -1)
+        {
+            fstrokes.push_back(raw_x - dot_scale * (1));
+            fstrokes.push_back(raw_y);
+            fstrokes.push_back(raw_x + dot_scale * (-1 + 2 * scale_down));
+            fstrokes.push_back(raw_y);
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
+            fstrokes.push_back(raw_x);
+            fstrokes.push_back(raw_y - dot_scale * (1));
+            fstrokes.push_back(raw_x);
+            fstrokes.push_back(raw_y + dot_scale * (-1 + 2 * scale_down));
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
+            // fstrokes.push_back(raw_x - dot_scale * (1));
+            // fstrokes.push_back(raw_y - dot_scale * (1));
+            // fstrokes.push_back(raw_x - dot_scale * (1 + 2 * scale_down));
+            // fstrokes.push_back(raw_y - dot_scale * (1 + 2 * scale_down));
+            // fstrokes.push_back(-1);
+            // fstrokes.push_back(-1);
+            // fstrokes.push_back(raw_x - dot_scale * (1));
+            // fstrokes.push_back(raw_y + dot_scale * (1));
+            // fstrokes.push_back(raw_x - dot_scale * (1 + 2 * scale_down));
+            // fstrokes.push_back(raw_y + dot_scale * (1 - 2 * scale_down));
+            // fstrokes.push_back(-1);
+            // fstrokes.push_back(-1);
+        }
+    }    
+
+    // Stroke the character by scaling
+    for (int i = 0; i < num_strokes; ++i)
+    {
+        float raw_x = stroke_data[2 * i + 0];
+        float raw_y = stroke_data[2 * i + 1];
+        if (raw_x != -1 || raw_y != -1)
+        {
+            float mod_x;
+            float mod_y;
+            if (last_raw_x != -1 || last_raw_y != -1)
+            {
+                float desired_dx = raw_x - last_raw_x;
+                float desired_dy = raw_y - last_raw_y;
+                mod_x = last_mod_x + scale_down * desired_dx;
+                mod_y = last_mod_y + scale_down * desired_dy;
+            }
+            else
+            {
+                mod_x = raw_x;
+                mod_y = raw_y;
+            }
+            fstrokes.push_back(mod_x);
+            fstrokes.push_back(mod_y);
+            last_raw_x = raw_x;
+            last_raw_y = raw_y;
+            last_mod_x = mod_x;
+            last_mod_y = mod_y;
+        }
+        else
+        {
+            last_raw_x = -1;
+            last_raw_y = -1;
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
+        }
     }    
 }
 
@@ -311,7 +398,7 @@ void wacom_char(char ascii_value)
     // Condition the strokes
     std::vector<float> fstrokes;
 //    condition_strokes1(stroke_data, num_strokes, fstrokes);
-    condition_strokes3(stroke_data, num_strokes, fstrokes);
+    condition_strokes_debug(stroke_data, num_strokes, fstrokes);
     num_strokes = fstrokes.size() >> 1;
 
     printf("Ascii %d ('%c'): %d strokes, %d width : ", ascii_value, ascii_value, num_strokes, char_width);
@@ -400,7 +487,7 @@ finish_wacom_events();
     {
         cursor_x = limit_left;
         if (cursor_y > limit_bottom)
-            cursor_y -= line_height;
+            cursor_y -= line_height * font_scale;
     }
 }
 
@@ -425,7 +512,7 @@ void handle_event(const struct input_event* evt)
             {
                 cursor_x = limit_left;
                 if (cursor_y > limit_bottom)
-                    cursor_y -= line_height;
+                    cursor_y -= line_height * font_scale;
             }
             break;
         default:
