@@ -42,8 +42,15 @@
 
 static int keyboard = -1;
 static int wacom = -1;
-static int line_height = 30;
-static int font_scale = 20;
+
+// TUNING VARIABLES
+static int font_scale = 20; // Default text size
+static int line_height = 35; // This will be scaled by the text size
+static float sleep_after_pen_up_ms = 5;
+static float sleep_after_pen_down_ms = 5;    // Without this, segments go missing
+static float sleep_each_stroke_point_ms = 2;
+static float mini_segment_length = 10.0;      // How far to move the pen while drawing
+
 static int cursor_x = limit_left;
 static int cursor_y = limit_top;
 static int left_shift = 0;
@@ -78,7 +85,7 @@ void send_wacom_event(int type, int code, int value)
     pending_events.push_back(evt);
     finish_wacom_events();
 }
-
+#if 0
 void condition_strokes1(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
 {
     // The reMarkable strokes problem is that the pen travels too far while down.
@@ -361,11 +368,10 @@ void condition_strokes_debug2(const int8_t* stroke_data, int num_strokes, std::v
         }
     }    
 }
-
+#endif
 void condition_strokes_interp(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
 {
     // This one actually works~
-    float seg_len = 5.0;
     float last_raw_x = -1;
     float last_raw_y = -1;
 
@@ -383,7 +389,7 @@ void condition_strokes_interp(const int8_t* stroke_data, int num_strokes, std::v
                 float length = font_scale * sqrt(desired_dx * desired_dx + desired_dy * desired_dy);
                 if (length > 0.0001)
                 {
-                    int subsegments = length / seg_len - 1;
+                    int subsegments = length / mini_segment_length - 1;
                     for (int i = 0; i < subsegments; ++i)
                     {
                         float t = (float)i / (float)subsegments;
@@ -558,7 +564,7 @@ send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
                     send_wacom_event(0, 0, 0);
                     finish_wacom_events();
 finish_wacom_events();
-usleep(5 * 1000);
+usleep(sleep_after_pen_up_ms * 1000);
                     pen_down = false;
                 }
             }
@@ -566,27 +572,24 @@ usleep(5 * 1000);
             {
                 x = (float)dx * font_scale + cursor_x;
                 y = (float)dy * font_scale + cursor_y;
-                for (int iter = 0; iter < 1; ++iter)
-                {
 finish_wacom_events();
-usleep(5 * 1000);
-                    send_wacom_event(EV_ABS, ABS_X, (int)y);
-                    send_wacom_event(EV_ABS, ABS_Y, (int)x);
-                    send_wacom_event(EV_ABS, ABS_PRESSURE, 3288);
+usleep(sleep_each_stroke_point_ms * 1000);
+                send_wacom_event(EV_ABS, ABS_X, (int)y);
+                send_wacom_event(EV_ABS, ABS_Y, (int)x);
+                send_wacom_event(EV_ABS, ABS_PRESSURE, 3288);
 send_wacom_event(EV_ABS, ABS_DISTANCE, 0);
-                    send_wacom_event(EV_ABS, ABS_TILT_X, 0);
-                    send_wacom_event(EV_ABS, ABS_TILT_Y, 0);
+                send_wacom_event(EV_ABS, ABS_TILT_X, 0);
+                send_wacom_event(EV_ABS, ABS_TILT_Y, 0);
+                send_wacom_event(0, 0, 0);
+                finish_wacom_events();
+                if (!pen_down)
+                {
+                    send_wacom_event(EV_KEY, BTN_TOUCH, 1);
                     send_wacom_event(0, 0, 0);
                     finish_wacom_events();
-                    if (!pen_down && iter == 0)
-                    {
-                        send_wacom_event(EV_KEY, BTN_TOUCH, 1);
-                        send_wacom_event(0, 0, 0);
-                        finish_wacom_events();
 finish_wacom_events();
-usleep(5 * 1000); // <---- If I remove this, strokes are missing.
-                        pen_down = true;
-                    }
+usleep(sleep_after_pen_down_ms * 1000);  // <---- If I remove this, strokes are missing.
+                    pen_down = true;
                 }
             }
         }
