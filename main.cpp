@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <linux/input.h>
@@ -287,6 +288,82 @@ void condition_strokes_debug(const int8_t* stroke_data, int num_strokes, std::ve
     }    
 }
 
+
+void condition_strokes_debug2(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
+{
+    // The reMarkable strokes problem is that the pen travels too far while down.
+    // This version fixes the problem by scaling down the distance traveled in each
+    // segment by a constant factor.
+    float seg_len = 5.0;
+    float scale_down = 2.0/3.0;
+    float last_raw_x = -1;
+    float last_raw_y = -1;
+
+    // Draw dots
+    float dot_scale = 0.2;
+    for (int i = 0; i < num_strokes; ++i)
+    {
+        float raw_x = stroke_data[2 * i + 0];
+        float raw_y = stroke_data[2 * i + 1];
+        if (raw_x != -1 || raw_y != -1)
+        {
+            fstrokes.push_back(raw_x - dot_scale * (1));
+            fstrokes.push_back(raw_y);
+            fstrokes.push_back(raw_x + dot_scale * (-1 + 2 * scale_down));
+            fstrokes.push_back(raw_y);
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
+            fstrokes.push_back(raw_x);
+            fstrokes.push_back(raw_y - dot_scale * (1));
+            fstrokes.push_back(raw_x);
+            fstrokes.push_back(raw_y + dot_scale * (-1 + 2 * scale_down));
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
+        }
+    }    
+
+    // Stroke the character by scaling
+    for (int i = 0; i < num_strokes; ++i)
+    {
+        float raw_x = stroke_data[2 * i + 0];
+        float raw_y = stroke_data[2 * i + 1];
+        if (raw_x != -1 || raw_y != -1)
+        {
+            if (last_raw_x != -1 || last_raw_y != -1)
+            {
+                float desired_dx = raw_x - last_raw_x;
+                float desired_dy = raw_y - last_raw_y;
+                float length = font_scale * sqrt(desired_dx * desired_dx + desired_dy * desired_dy);
+                if (length > 0.0001)
+                {
+                    int subsegments = length / seg_len - 1;
+                    for (int i = 0; i < subsegments; ++i)
+                    {
+                        float t = (float)i / (float)subsegments;
+                        float dx = t * desired_dx;
+                        float dy = t * desired_dy;
+                        float mod_x = last_raw_x + dx;
+                        float mod_y = last_raw_y + dy;
+                        fstrokes.push_back(mod_x);
+                        fstrokes.push_back(mod_y);
+                    }
+                }
+            }
+            fstrokes.push_back(raw_x);
+            fstrokes.push_back(raw_y);
+            last_raw_x = raw_x;
+            last_raw_y = raw_y;
+        }
+        else
+        {
+            last_raw_x = -1;
+            last_raw_y = -1;
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
+        }
+    }    
+}
+
 void wacom_char(char ascii_value)
 {
     int num_strokes = 0;
@@ -398,7 +475,7 @@ void wacom_char(char ascii_value)
     // Condition the strokes
     std::vector<float> fstrokes;
 //    condition_strokes1(stroke_data, num_strokes, fstrokes);
-    condition_strokes_debug(stroke_data, num_strokes, fstrokes);
+    condition_strokes_debug2(stroke_data, num_strokes, fstrokes);
     num_strokes = fstrokes.size() >> 1;
 
     printf("Ascii %d ('%c'): %d strokes, %d width : ", ascii_value, ascii_value, num_strokes, char_width);
