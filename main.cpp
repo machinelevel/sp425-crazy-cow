@@ -43,7 +43,7 @@
 static int keyboard = -1;
 static int wacom = -1;
 static int line_height = 30;
-static int font_scale = 30 * 5;
+static int font_scale = 20;
 static int cursor_x = limit_left;
 static int cursor_y = limit_top;
 static int left_shift = 0;
@@ -291,9 +291,7 @@ void condition_strokes_debug(const int8_t* stroke_data, int num_strokes, std::ve
 
 void condition_strokes_debug2(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
 {
-    // The reMarkable strokes problem is that the pen travels too far while down.
-    // This version fixes the problem by scaling down the distance traveled in each
-    // segment by a constant factor.
+    // This one actually works~
     float seg_len = 5.0;
     float scale_down = 2.0/3.0;
     float last_raw_x = -1;
@@ -321,6 +319,55 @@ void condition_strokes_debug2(const int8_t* stroke_data, int num_strokes, std::v
             fstrokes.push_back(-1);
         }
     }    
+
+    // Stroke the character by scaling
+    for (int i = 0; i < num_strokes; ++i)
+    {
+        float raw_x = stroke_data[2 * i + 0];
+        float raw_y = stroke_data[2 * i + 1];
+        if (raw_x != -1 || raw_y != -1)
+        {
+            if (last_raw_x != -1 || last_raw_y != -1)
+            {
+                float desired_dx = raw_x - last_raw_x;
+                float desired_dy = raw_y - last_raw_y;
+                float length = font_scale * sqrt(desired_dx * desired_dx + desired_dy * desired_dy);
+                if (length > 0.0001)
+                {
+                    int subsegments = length / seg_len - 1;
+                    for (int i = 0; i < subsegments; ++i)
+                    {
+                        float t = (float)i / (float)subsegments;
+                        float dx = t * desired_dx;
+                        float dy = t * desired_dy;
+                        float mod_x = last_raw_x + dx;
+                        float mod_y = last_raw_y + dy;
+                        fstrokes.push_back(mod_x);
+                        fstrokes.push_back(mod_y);
+                    }
+                }
+            }
+            fstrokes.push_back(raw_x);
+            fstrokes.push_back(raw_y);
+            last_raw_x = raw_x;
+            last_raw_y = raw_y;
+        }
+        else
+        {
+            last_raw_x = -1;
+            last_raw_y = -1;
+            fstrokes.push_back(-1);
+            fstrokes.push_back(-1);
+        }
+    }    
+}
+
+void condition_strokes_interp(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
+{
+    // This one actually works~
+    float seg_len = 5.0;
+    float last_raw_x = -1;
+    float last_raw_y = -1;
 
     // Stroke the character by scaling
     for (int i = 0; i < num_strokes; ++i)
@@ -475,10 +522,10 @@ void wacom_char(char ascii_value)
     // Condition the strokes
     std::vector<float> fstrokes;
 //    condition_strokes1(stroke_data, num_strokes, fstrokes);
-    condition_strokes_debug2(stroke_data, num_strokes, fstrokes);
+    condition_strokes_interp(stroke_data, num_strokes, fstrokes);
     num_strokes = fstrokes.size() >> 1;
 
-    printf("Ascii %d ('%c'): %d strokes, %d width : ", ascii_value, ascii_value, num_strokes, char_width);
+//    printf("Ascii %d ('%c'): %d strokes, %d width : ", ascii_value, ascii_value, num_strokes, char_width);
 //    int strokes[] = {0, 0, 100, 100, 200, 0, -1000, -1000, 50, 50, 150, 50, -2000, -2000};
 
     if (num_strokes > 0)
@@ -497,7 +544,7 @@ finish_wacom_events();
         {
             float dx = fstrokes[2 * stroke_index + 0];
             float dy = fstrokes[2 * stroke_index + 1];
-            printf("%f,%f   ", dx, dy);
+            //printf("%f,%f   ", dx, dy);
             if (dx == -1 && dy == -1)
             {
                 if (pen_down)
@@ -511,7 +558,7 @@ send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
                     send_wacom_event(0, 0, 0);
                     finish_wacom_events();
 finish_wacom_events();
-//usleep(250 * 1000);
+usleep(5 * 1000);
                     pen_down = false;
                 }
             }
@@ -522,7 +569,7 @@ finish_wacom_events();
                 for (int iter = 0; iter < 1; ++iter)
                 {
 finish_wacom_events();
-//usleep(250 * 1000);
+usleep(5 * 1000);
                     send_wacom_event(EV_ABS, ABS_X, (int)y);
                     send_wacom_event(EV_ABS, ABS_Y, (int)x);
                     send_wacom_event(EV_ABS, ABS_PRESSURE, 3288);
@@ -537,13 +584,13 @@ send_wacom_event(EV_ABS, ABS_DISTANCE, 0);
                         send_wacom_event(0, 0, 0);
                         finish_wacom_events();
 finish_wacom_events();
-usleep(1 * 1000); // <---- If I remove this, strokes are missing.
+usleep(5 * 1000); // <---- If I remove this, strokes are missing.
                         pen_down = true;
                     }
                 }
             }
         }
-        printf("\n");
+        //printf("\n");
         if (pen_down)
         {
             send_wacom_event(EV_ABS, ABS_X, (int)y);
@@ -595,7 +642,7 @@ void handle_event(const struct input_event* evt)
         default:
             if (evt->value) // key down
             {
-                printf("key, sh=%d\n", (int)(left_shift | right_shift));
+                //printf("key, sh=%d\n", (int)(left_shift | right_shift));
                 int modifiers = 0;
                 if (left_shift | right_shift | caps_lock)
                     modifiers |= MOD_CAPS;
