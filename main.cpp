@@ -23,6 +23,8 @@
 #include <fcntl.h>
 #include <linux/input.h>
 #include <vector>
+#include <string>
+#include <string.h>
 #include "ccow.h"
 
 // Some useful references
@@ -40,8 +42,8 @@
 // So far this is just a proof of concept.
 ////////////////////////////////////////////////////////////////////////////
 
-static int keyboard = -1;
-static int wacom = -1;
+static int device_keyboard = -1;
+static int device_wacom = -1;
 
 // TUNING VARIABLES
 static int font_scale = 20; // Default text size
@@ -69,8 +71,8 @@ void finish_wacom_events()
 {
     if (pending_events.size())
     {
-        write(wacom, &pending_events[0], pending_events.size() * sizeof(pending_events[0]));
-        fsync(wacom);
+        write(device_wacom, &pending_events[0], pending_events.size() * sizeof(pending_events[0]));
+        fsync(device_wacom);
         pending_events.clear();
     }
 }
@@ -640,6 +642,8 @@ void handle_event(const struct input_event* evt)
                 cursor_x = limit_left;
                 if (cursor_y > limit_bottom)
                     cursor_y -= line_height * font_scale;
+                else
+                    cursor_y = limit_top;
             }
             break;
         default:
@@ -668,27 +672,77 @@ void handle_event(const struct input_event* evt)
     }
 }
 
+#include <sys/types.h>
+#include <dirent.h>
+void find_devices()
+{
+    // printf("Pen input: %s.\n", (device_wacom >= 0) ? "connected" : "not connected");
+    // printf("Keyboard: %s.\n", (device_keyboard >= 0) ? "connected" : "not connected");
+    std::string path = "/dev/input/by-path/";
+    DIR* dirp = opendir(path.c_str());
+    struct dirent* dp;
+    while ((dp = readdir(dirp)) != NULL)
+    {
+        if (strstr(dp->d_name, "event-mouse"))
+        {
+            if (device_wacom == -1)
+            {
+                device_wacom = open((path + dp->d_name).c_str(), O_WRONLY);
+                if (device_wacom >= 0)
+                    printf("  Connected to pen input device %s.\n", (path + dp->d_name).c_str());
+                else
+                    printf("  Failed to connect to pen input device %s.\n", (path + dp->d_name).c_str());
+            }
+        }
+        else if (strstr(dp->d_name, "event-kbd"))
+        {
+            if (device_keyboard == -1)
+            {
+//                device_keyboard = open("/dev/input/event2", O_RDONLY);
+                device_keyboard = open((path + dp->d_name).c_str(), O_RDONLY);
+                if (device_keyboard >= 0)
+                    printf("  Connected to keyboard device %s.\n", (path + dp->d_name).c_str());
+                else
+                    printf("  Failed to connect to keyboard device %s.\n", (path + dp->d_name).c_str());
+            }
+        }
+    }
+    closedir(dirp);
+    // printf("Pen input: %s.\n", (device_wacom >= 0) ? "connected" : "not connected");
+    // printf("Keyboard: %s.\n", (device_keyboard >= 0) ? "connected" : "not connected");
+}
+
 void handle_keys()
 {
     struct input_event evt;
-
-    keyboard = open(EXTERNAL_USB_KEYBOARD, O_RDONLY);
-    wacom = open(WACOM, O_WRONLY);
-    if (!keyboard)
+    while (1)
     {
-        fprintf(stderr, "cannot open keyboard");
-        exit(1);
+        if (device_keyboard < 0)
+        {
+            find_devices();
+            if (device_keyboard < 0)
+                usleep(2 * 1000 * 1000);
+        }
+        else
+        {
+//usleep(1 * 1000 * 1000);
+//printf("> reading...\n");
+            int read_result = read(device_keyboard, &evt, sizeof(evt));
+//printf("   ...read result = %d\n", (int)read_result);
+            if (read_result > 0)
+            {
+                handle_event(&evt);
+            }
+            else
+            {
+                // Lost the keyboard, lazily try to re-acquire it
+                printf("Lost keyboard connection.\n");
+                close(device_keyboard);
+                device_keyboard = -1;
+                usleep(2 * 1000 * 1000);
+            }
+        }
     }
-    if (!wacom)
-    {
-        fprintf(stderr, "cannot open wacom");
-        exit(1);
-    }
-    while(read(keyboard,&evt, sizeof(evt)))
-    {
-        handle_event(&evt);
-    }
-    close(keyboard);
 }
 
 //@@@@@ ej the BUTTONS device is the buttons, but not the physical keyboard!

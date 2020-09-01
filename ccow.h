@@ -5,9 +5,6 @@
 
 #include <stdint.h>
 
-#define WACOM                 "/dev/input/event0"
-#define EXTERNAL_USB_KEYBOARD "/dev/input/event3"
-
 #define MOD_CAPS  0x0001
 #define MOD_SHIFT 0x0002
 #define MOD_CTRL  0x0004
