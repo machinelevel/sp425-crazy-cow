@@ -25,6 +25,8 @@
 #include <vector>
 #include <string>
 #include <string.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include "ccow.h"
 
 // Some useful references
@@ -74,7 +76,7 @@ int backspace_hist_pos_y[BACKSPACE_HIST_LENGTH];
 char backspace_hist_char[BACKSPACE_HIST_LENGTH];
 int backspace_slot = 0;
 
-void finish_wacom_events()
+static void finish_wacom_events()
 {
     if (pending_events.size())
     {
@@ -84,7 +86,7 @@ void finish_wacom_events()
     }
 }
 
-void send_wacom_event(int type, int code, int value)
+static void send_wacom_event(int type, int code, int value)
 {
     struct input_event evt;
     gettimeofday(&evt.time, NULL);
@@ -95,7 +97,7 @@ void send_wacom_event(int type, int code, int value)
     finish_wacom_events();
 }
 
-void condition_strokes_interp(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
+static void condition_strokes_interp(const int8_t* stroke_data, int num_strokes, std::vector<float>& fstrokes)
 {
     // This one actually works~
     float last_raw_x = -1;
@@ -143,7 +145,7 @@ void condition_strokes_interp(const int8_t* stroke_data, int num_strokes, std::v
     }    
 }
 
-void press_ui_button(int x, int y)
+static void press_ui_button(int x, int y)
 {
     // Pen down
     send_wacom_event(EV_KEY, BTN_TOOL_PEN, 1);
@@ -177,18 +179,18 @@ void press_ui_button(int x, int y)
     finish_wacom_events();
 }
 
-void go_to_home_pos()
+static void go_to_home_pos()
 {
     cursor_x = limit_left;
     cursor_y = limit_top;
 }
 
-void detected_new_page()
+static void detected_new_page()
 {
     go_to_home_pos();
 }
 
-void new_line()
+static void new_line()
 {
     cursor_x = limit_left;
     if (cursor_y > limit_bottom)
@@ -197,7 +199,7 @@ void new_line()
         go_to_home_pos();
 }
 
-int get_num_undos(char ascii_value)
+static int get_num_undos(char ascii_value)
 {
     int num_strokes = 0;
     int char_width = 0;
@@ -215,7 +217,7 @@ int get_num_undos(char ascii_value)
     return undo_count;
 }
 
-void do_backspace()
+static void do_backspace()
 {
     int prev_slot = (backspace_slot + BACKSPACE_HIST_LENGTH - 1) % BACKSPACE_HIST_LENGTH;
     char ascii_value = backspace_hist_char[prev_slot];
@@ -236,7 +238,7 @@ void do_backspace()
     }
 }
 
-void backspace_add_char(char ascii_value)
+static void backspace_add_char(char ascii_value)
 {
     backspace_hist_char[backspace_slot] = ascii_value;
     backspace_hist_pos_x[backspace_slot] = cursor_x;
@@ -244,7 +246,7 @@ void backspace_add_char(char ascii_value)
     backspace_slot = (backspace_slot + 1) % BACKSPACE_HIST_LENGTH;
 }
 
-void wacom_char(char ascii_value)
+static void wacom_char(char ascii_value)
 {
     int num_strokes = 0;
     int char_width = 0;
@@ -256,18 +258,19 @@ void wacom_char(char ascii_value)
         return;
 
     // Condition the strokes
-    std::vector<float> fstrokes;
+    static std::vector<float> fstrokes; // static to avoid constant allocation
+    fstrokes.clear();
     condition_strokes_interp(stroke_data, num_strokes, fstrokes);
     num_strokes = fstrokes.size() >> 1;
 
     if (num_strokes > 0)
     {
         send_wacom_event(EV_KEY, BTN_TOOL_PEN, 1);
-send_wacom_event(EV_KEY, BTN_TOUCH, 0);
-send_wacom_event(EV_ABS, ABS_PRESSURE, 0);
-send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
-send_wacom_event(0, 0, 0);
-finish_wacom_events();
+        send_wacom_event(EV_KEY, BTN_TOUCH, 0);
+        send_wacom_event(EV_ABS, ABS_PRESSURE, 0);
+        send_wacom_event(EV_ABS, ABS_DISTANCE, 80);
+        send_wacom_event(0, 0, 0);
+        finish_wacom_events();
         bool pen_down = false;
         float x = 0;
         float y = 0;
@@ -336,12 +339,14 @@ finish_wacom_events();
     }
 }
 
-void handle_event(const struct input_event* evt)
+static void handle_event(const struct input_event* evt)
 {
     if (evt->type == EV_KEY)
     {
         switch (evt->code)
         {
+        case KEY_LEFT:   detected_new_page(); break;
+        case KEY_RIGHT:  detected_new_page(); break;
         case KEY_LEFTSHIFT:  left_shift  = evt->value; break;
         case KEY_RIGHTSHIFT: right_shift = evt->value; break;
         case KEY_LEFTCTRL:   left_ctrl   = evt->value; break;
@@ -361,10 +366,7 @@ void handle_event(const struct input_event* evt)
             break;
         case KEY_BACKSPACE:
             if (evt->value) // key down
-            {
-                printf("backspace\n");
                 do_backspace();
-            }
             break;
         default:
             if (evt->value) // key down
@@ -392,9 +394,7 @@ void handle_event(const struct input_event* evt)
     }
 }
 
-#include <sys/types.h>
-#include <dirent.h>
-void find_devices()
+static void find_devices()
 {
     std::string path = "/dev/input/by-path/";
     DIR* dirp = opendir(path.c_str());
@@ -428,7 +428,7 @@ void find_devices()
     closedir(dirp);
 }
 
-void do_main_loop()
+static void do_main_loop()
 {
     struct input_event evt;
     while (1)
@@ -458,7 +458,7 @@ void do_main_loop()
     }
 }
 
-void initialize()
+static void initialize()
 {
     memset(backspace_hist_char, 0, sizeof(backspace_hist_char));
 }
