@@ -238,6 +238,48 @@ static void do_backspace()
     }
 }
 
+static void wacom_char(char ascii_value, bool wrap_ok);
+
+static void word_wrap()
+{
+    // Of we flowed off the right side, try to do a word-wrap
+    const int max_word_chars = 10;
+    int wrap_slot = backspace_slot;
+    int bs_count = 0;
+    bool done = false;
+    while (!done)
+    {
+        wrap_slot = (wrap_slot + BACKSPACE_HIST_LENGTH - 1) % BACKSPACE_HIST_LENGTH;
+        char ascii_value = backspace_hist_char[wrap_slot];
+        if (ascii_value == 0 || ascii_value == ' ')
+        {
+            // We can wrap this
+            for (int bs = 0; bs < bs_count; ++bs)
+            {
+                do_backspace();
+                usleep(10 * 1000);
+            }
+            new_line();
+            for (int bs = 0; bs < bs_count; ++bs)
+            {
+                wacom_char(backspace_hist_char[backspace_slot], false);
+                usleep(10 * 1000);
+            }
+            done = true;
+        }
+        else if (bs_count > max_word_chars)
+        {
+            // Give up and hoit return
+            new_line();
+            done = true;
+        }
+        else
+        {
+            bs_count++;
+        }
+    }
+}
+
 static void backspace_add_char(char ascii_value)
 {
     backspace_hist_char[backspace_slot] = ascii_value;
@@ -246,7 +288,7 @@ static void backspace_add_char(char ascii_value)
     backspace_slot = (backspace_slot + 1) % BACKSPACE_HIST_LENGTH;
 }
 
-static void wacom_char(char ascii_value)
+static void wacom_char(char ascii_value, bool wrap_ok)
 {
     int num_strokes = 0;
     int char_width = 0;
@@ -335,7 +377,10 @@ static void wacom_char(char ascii_value)
     cursor_x += font_scale * char_width;
     if (cursor_x > limit_right)
     {
-        new_line();
+        if (wrap_ok)
+            word_wrap();
+        else
+            new_line();
     }
 }
 
@@ -383,7 +428,7 @@ static void handle_event(const struct input_event* evt)
                     modifiers |= MOD_ALT;
                 char ascii = keycode_to_ascii(evt->code, modifiers);
                 if (ascii)
-                    wacom_char(ascii);
+                    wacom_char(ascii, true);
             }
             break;
         }
