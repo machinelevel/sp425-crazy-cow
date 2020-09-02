@@ -108,7 +108,7 @@ static const int8_t hershey_font_simplex_compact[95][112] = {
 
 const int8_t* get_font_char(const char* font_name, char ascii_value, int& out_num_verts, int& out_horiz_dist)
 {
-    if (1 || !strcmp(font_name, "hershey_font_simplex"))
+    if (1 || !strcmp(font_name, "hershey"))
     {
         if (ascii_value >= 32 || ascii_value <= 126)
         {
