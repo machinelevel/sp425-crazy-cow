@@ -47,5 +47,8 @@ Just plug in a keyboard and start typing! Seriously, that's it.
     - It does **basic word-wrapping** by backspacing and re-typing. *(Yeah, I know, but it works.)*
     - Use **up/down arrows** to move the cursor up/down.
 
+## Where's the cursor?
+There is no visible cursor. Do not panic. Real typewriters don't have one either. If you type something in the wrong place, just `backspace`, or tap undo, or erase it with the stylus. Then (like a real typewriter) use `space`, `up`, `down`, `enter` to get to the right place.
+
 ## If you find a bug
 Please post an issue. This is a just-for-fun project for me.
