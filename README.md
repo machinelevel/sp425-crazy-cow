@@ -1,15 +1,20 @@
-# Secret Plan 425: Crazy Cow Ink Tablet Lettering
+# Crazy Cow: Typewriter-ish reMarkable Input
+*ej's Secret Plan #425*
 
 ## What's this?
-It turns keyboard input into text drawn onto the screen **in the existing reMarkable environment** by mimicking stylus motion.
+It's a tiny (40k!) extension which turns keyboard input into text, drawn onto the screen **in the existing reMarkable environment** by mimicking stylus motion.
+
+![Crazy Cow demo page](notes/demo1.jpg)
+*(most of these features got done)*
 
 ## What's this not?
 - It's not fancy.
 - It's not a text editor.
 - It's not a code editor.
+- It's not been tested on the reMarkable2.
 
 ## What's Crazy Cow?
-Sugary cereal from General Mills in the 1970's which had two superpowers:
+The best sugar cereal from General Mills in the 1970's which had two superpowers:
 1. Turn normal milk into chocolate milk.
 2. Contain a codewheel which allows the user to emboss letters onto normal paper, using an optional letter-shift cypher.
 
@@ -27,3 +32,18 @@ I use my reMarkable tablet every day, for work and for personal stuff. I've spen
 3. `ssh` to the tablet
 4. `systemctl start crazy-cow`
 5. `systemctl enable crazy-cow` (to enable on boot)
+
+## User's Manual
+Just plug in a keyboard and start typing! Seriously, that's it.
+
+- It will use whatever marker tool you've got selected.
+- You can use the stylus to erase, correct, highlight, whatever.
+- Use **ctrl key with `+`, `-`, `0`** to adjust the lettering size.
+- Use **left/right arrows** to turn the page.
+- **Some spiffy half-baked features:**
+    - The **backspace key** does very limited backspacing, by tapping the "undo" tool.
+    - It does **basic word-wrapping** by backspacing and re-typing. *(Yeah, I know, but it works.)*
+    - Use **up/down arrows** to move the cursor up/down.
+
+## If you find a bug
+Please post an issue. This is a just-for-fun project for me.
