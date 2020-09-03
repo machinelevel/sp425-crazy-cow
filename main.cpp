@@ -392,6 +392,22 @@ static void handle_event(const struct input_event* evt)
         {
         case KEY_LEFT:   detected_new_page(); break;
         case KEY_RIGHT:  detected_new_page(); break;
+        case KEY_UP:
+            if (evt->value)
+            {
+                cursor_y += line_height * font_scale;
+                if (cursor_y > limit_top)
+                    cursor_y = limit_top;
+            }
+            break;
+        case KEY_DOWN:
+            if (evt->value)
+            {
+                cursor_y -= line_height * font_scale;
+                if (cursor_y < limit_bottom)
+                    cursor_y = limit_bottom;
+            }
+            break;
         case KEY_LEFTSHIFT:  left_shift  = evt->value; break;
         case KEY_RIGHTSHIFT: right_shift = evt->value; break;
         case KEY_LEFTCTRL:   left_ctrl   = evt->value; break;
