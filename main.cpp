@@ -48,11 +48,15 @@ static int device_keyboard = -1;
 static int device_wacom = -1;
 
 // TUNING VARIABLES
-static int font_scale = 20; // Default text size
+static const float default_font_scale = 20;
+static const float min_font_scale = 11;
+static const float max_font_scale = 75;
+static float font_scale = default_font_scale; // Default text size
+
 static int line_height = 35; // This will be scaled by the text size
 static float sleep_after_pen_up_ms = 5;
 static float sleep_after_pen_down_ms = 5;    // Without this, segments go missing
-static float sleep_each_stroke_point_ms = 2;
+static float sleep_each_stroke_point_ms = 1;
 static float mini_segment_length = 10.0;      // How far to move the pen while drawing
 
 static int cursor_x = limit_left;
@@ -64,8 +68,6 @@ static int right_ctrl = 0;
 static int left_alt = 0;
 static int right_alt = 0;
 static int caps_lock = 0;
-// static float stylus_x = 0;
-// static float stylus_y = 0;
 static const char* current_font = "hershey";
 
 std::vector<struct input_event> pending_events;
@@ -288,6 +290,23 @@ static void backspace_add_char(char ascii_value)
     backspace_slot = (backspace_slot + 1) % BACKSPACE_HIST_LENGTH;
 }
 
+static void adjust_font_scale(int updown)
+{
+    if (updown == 1)
+    {
+        if (font_scale < max_font_scale)
+            font_scale *= 1.0 / 0.8;
+    }
+    else if (updown == -1)
+    {
+        if (font_scale > min_font_scale)
+            font_scale *= 0.8;
+    }
+    else
+        font_scale = default_font_scale;
+//    printf("%d: font scale = %f\n", updown, font_scale);
+}
+
 static void wacom_char(char ascii_value, bool wrap_ok)
 {
     int num_strokes = 0;
@@ -388,6 +407,16 @@ static void handle_event(const struct input_event* evt)
 {
     if (evt->type == EV_KEY)
     {
+        int modifiers = 0;
+        if (left_shift | right_shift | caps_lock)
+            modifiers |= MOD_CAPS;
+        if (left_shift | right_shift)
+            modifiers |= MOD_SHIFT;
+        if (left_ctrl | right_ctrl)
+            modifiers |= MOD_CTRL;
+        if (left_alt | right_alt)
+            modifiers |= MOD_ALT;
+
         switch (evt->code)
         {
         case KEY_LEFT:   detected_new_page(); break;
@@ -432,19 +461,25 @@ static void handle_event(const struct input_event* evt)
         default:
             if (evt->value) // key down
             {
-                //printf("key, sh=%d\n", (int)(left_shift | right_shift));
-                int modifiers = 0;
-                if (left_shift | right_shift | caps_lock)
-                    modifiers |= MOD_CAPS;
-                if (left_shift | right_shift)
-                    modifiers |= MOD_SHIFT;
-                if (left_ctrl | right_ctrl)
-                    modifiers |= MOD_CTRL;
-                if (left_alt | right_alt)
-                    modifiers |= MOD_ALT;
-                char ascii = keycode_to_ascii(evt->code, modifiers);
-                if (ascii)
-                    wacom_char(ascii, true);
+                if (modifiers & MOD_CTRL)
+                {
+                    if (evt->value == 1)
+                    {
+                        switch (evt->code)
+                        {
+                        case KEY_MINUS: adjust_font_scale(-1); break;
+                        case KEY_EQUAL: adjust_font_scale(1);  break;
+                        case KEY_0:     adjust_font_scale(0);  break;
+                        default: break;
+                        }
+                    }
+                }
+                else
+                {
+                    char ascii = keycode_to_ascii(evt->code, modifiers);
+                    if (ascii)
+                        wacom_char(ascii, true);
+                }
             }
             break;
         }
