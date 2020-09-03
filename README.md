@@ -5,7 +5,8 @@
 It's a tiny (40k!) extension which turns keyboard input into text, drawn onto the screen **in the existing reMarkable environment** by mimicking stylus motion.
 
 ![Crazy Cow demo page](notes/demo1.jpg)
-*(most of these features got done)*
+
+*(Most of these features got done, yay. Notice the hand-corrected letters, the text recognotion works on that too!)*
 
 ## What's this not?
 - It's not fancy.
@@ -37,6 +38,7 @@ I use my reMarkable tablet every day, for work and for personal stuff. I've spen
 Just plug in a keyboard and start typing! Seriously, that's it.
 
 - It will use whatever marker tool you've got selected.
+- The reMarkable's built-in text recognition works well on things you type.
 - You can use the stylus to erase, correct, highlight, whatever.
 - Use **ctrl key with `+`, `-`, `0`** to adjust the lettering size.
 - Use **left/right arrows** to turn the page.
