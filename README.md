@@ -1,4 +1,4 @@
-# Crazy Cow: Typewriter-ish reMarkable Input
+# Crazy Cow: Typewriter-ish input for reMarkable
 *ej's Secret Plan #425*
 
 ## What's this?
