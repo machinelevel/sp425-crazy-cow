@@ -262,6 +262,7 @@ static void word_wrap()
                 usleep(10 * 1000);
             }
             new_line();
+            usleep(500 * 1000); // Allow time for the undo to finish, else we lose strokes.
             for (int bs = 0; bs < bs_count; ++bs)
             {
                 wacom_char(backspace_hist_char[backspace_slot], false);
