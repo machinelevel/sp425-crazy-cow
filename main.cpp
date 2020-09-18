@@ -44,6 +44,8 @@
 // So far this is just a proof of concept.
 ////////////////////////////////////////////////////////////////////////////
 
+#define GLOBAL_DEBUG_VERBOSE 1 // turn this on to track down problems
+
 static int device_keyboard = -1;
 static int device_wacom = -1;
 
@@ -408,6 +410,9 @@ static void handle_event(const struct input_event* evt)
 {
     if (evt->type == EV_KEY)
     {
+if (GLOBAL_DEBUG_VERBOSE) printf("    ]] at line %d in %s\n", __LINE__, __FUNCTION__);
+if (GLOBAL_DEBUG_VERBOSE) printf("      .. got key event type:%d code:%d val:%d\n", (int)evt->type, (int)evt->code, (int)evt->value);
+
         int modifiers = 0;
         if (left_shift | right_shift | caps_lock)
             modifiers |= MOD_CAPS;
@@ -478,6 +483,8 @@ static void handle_event(const struct input_event* evt)
                 else
                 {
                     char ascii = keycode_to_ascii(evt->code, modifiers);
+if (GLOBAL_DEBUG_VERBOSE) printf("    ]] at line %d in %s\n", __LINE__, __FUNCTION__);
+if (GLOBAL_DEBUG_VERBOSE && ascii) printf("      .. character to type:%c\n", ascii);
                     if (ascii)
                         wacom_char(ascii, true);
                 }
@@ -493,15 +500,20 @@ static void handle_event(const struct input_event* evt)
 
 static void find_devices()
 {
+if (GLOBAL_DEBUG_VERBOSE) printf("    ]] at line %d in %s\n", __LINE__, __FUNCTION__);
     std::string path = "/dev/input/by-path/";
     DIR* dirp = opendir(path.c_str());
     struct dirent* dp;
     while ((dp = readdir(dirp)) != NULL)
     {
+if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
         if (strstr(dp->d_name, "event-mouse"))
         {
+if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
+if (GLOBAL_DEBUG_VERBOSE) printf("       .. found wacom dev %s\n", dp->d_name);
             if (device_wacom == -1)
             {
+if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
                 device_wacom = open((path + dp->d_name).c_str(), O_WRONLY);
                 if (device_wacom >= 0)
                     printf("  Connected to pen input device %s.\n", (path + dp->d_name).c_str());
@@ -511,6 +523,8 @@ static void find_devices()
         }
         else if (strstr(dp->d_name, "event-kbd"))
         {
+if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
+if (GLOBAL_DEBUG_VERBOSE) printf("       .. found keyboard dev %s\n", dp->d_name);
             if (device_keyboard == -1)
             {
 //                device_keyboard = open("/dev/input/event2", O_RDONLY);
@@ -530,11 +544,16 @@ static void do_main_loop()
     struct input_event evt;
     while (1)
     {
+if (GLOBAL_DEBUG_VERBOSE) printf("  ]] at line %d in %s\n", __LINE__, __FUNCTION__);
         if (device_keyboard < 0)
         {
+if (GLOBAL_DEBUG_VERBOSE) printf("    .. at line %d  (no keyboard)\n", __LINE__);
             find_devices();
             if (device_keyboard < 0)
+            {
+if (GLOBAL_DEBUG_VERBOSE) printf("    .. at line %d  (still no keyboard)\n", __LINE__);
                 usleep(2 * 1000 * 1000);
+            }
         }
         else
         {
@@ -557,12 +576,17 @@ static void do_main_loop()
 
 static void initialize()
 {
+    if (GLOBAL_DEBUG_VERBOSE) printf("  ]] at line %d in %s\n", __LINE__, __FUNCTION__);
     memset(backspace_hist_char, 0, sizeof(backspace_hist_char));
+    if (GLOBAL_DEBUG_VERBOSE) printf("  ]] at line %d in %s\n", __LINE__, __FUNCTION__);
 }
 
 int main()
 {
+    if (GLOBAL_DEBUG_VERBOSE) printf("]] at line %d in %s\n", __LINE__, __FUNCTION__);
     initialize();
+    if (GLOBAL_DEBUG_VERBOSE) printf("]] at line %d in %s\n", __LINE__, __FUNCTION__);
     do_main_loop();
+    if (GLOBAL_DEBUG_VERBOSE) printf("]] at line %d in %s\n", __LINE__, __FUNCTION__);
     return 0;
 }
