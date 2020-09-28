@@ -24,6 +24,8 @@
 #include <linux/input.h>
 #include <vector>
 #include <string>
+#include <thread>
+#include <mutex>
 #include <string.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -44,9 +46,13 @@
 // So far this is just a proof of concept.
 ////////////////////////////////////////////////////////////////////////////
 
-#define GLOBAL_DEBUG_VERBOSE 1 // turn this on to track down problems
+#define GLOBAL_DEBUG_VERBOSE 0 // turn this on to track down problems
 
-static int device_keyboard = -1;
+static std::vector<std::thread*> keyboard_device_thread;
+static std::vector<std::string>  keyboard_device_name;
+static std::vector<std::thread*> discarded_threads;
+static std::mutex wacom_mutex;
+static std::mutex keyboard_list_mutex;
 static int device_wacom = -1;
 
 // TUNING VARIABLES
@@ -498,14 +504,50 @@ if (GLOBAL_DEBUG_VERBOSE && ascii) printf("      .. character to type:%c\n", asc
     }
 }
 
+static void keyboard_thread_loop(int device_index)
+{
+    std::string& name = keyboard_device_name[device_index];
+    int fd = open(name.c_str(), O_RDONLY);
+    if (fd <= 0)
+    {
+        printf("  Failed to connect to keyboard device %s.\n", name.c_str());
+        return;
+    }
+    else
+        printf("  Connected to keyboard device %s.\n", name.c_str());
+    struct input_event evt;
+    while (1)
+    {
+        int read_result = read(fd, &evt, sizeof(evt));
+        if (read_result > 0)
+        {
+            wacom_mutex.lock();
+            handle_event(&evt);
+            wacom_mutex.unlock();
+        }
+        else
+        {
+            printf("Lost keyboard connection: %s\n", name.c_str());
+            close(fd);
+            keyboard_list_mutex.lock();
+            discarded_threads.push_back(keyboard_device_thread[device_index]);
+            keyboard_device_thread[device_index] = NULL;
+            keyboard_list_mutex.unlock();
+            return;
+        }
+    }
+}
+
 static void find_devices()
 {
 if (GLOBAL_DEBUG_VERBOSE) printf("    ]] at line %d in %s\n", __LINE__, __FUNCTION__);
     std::string path = "/dev/input/by-path/";
     DIR* dirp = opendir(path.c_str());
     struct dirent* dp;
+    std::string full_pathname;
     while ((dp = readdir(dirp)) != NULL)
     {
+        full_pathname = path + dp->d_name;
 if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
         if (strstr(dp->d_name, "event-mouse"))
         {
@@ -514,7 +556,7 @@ if (GLOBAL_DEBUG_VERBOSE) printf("       .. found wacom dev %s\n", dp->d_name);
             if (device_wacom == -1)
             {
 if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
-                device_wacom = open((path + dp->d_name).c_str(), O_WRONLY);
+                device_wacom = open(full_pathname.c_str(), O_WRONLY);
                 if (device_wacom >= 0)
                     printf("  Connected to pen input device %s.\n", (path + dp->d_name).c_str());
                 else
@@ -523,62 +565,51 @@ if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNC
         }
         else if (strstr(dp->d_name, "event-kbd"))
         {
-if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
-if (GLOBAL_DEBUG_VERBOSE) printf("       .. found keyboard dev %s\n", dp->d_name);
-            if (device_keyboard == -1)
+            int num_keyboards = keyboard_device_name.size();
+            int device_index = 0;
+            while (device_index < num_keyboards && keyboard_device_name[device_index] != full_pathname)
+                ++device_index;
+            keyboard_list_mutex.lock();
             {
-//                device_keyboard = open("/dev/input/event2", O_RDONLY);
-                device_keyboard = open((path + dp->d_name).c_str(), O_RDONLY);
-                if (device_keyboard >= 0)
-                    printf("  Connected to keyboard device %s.\n", (path + dp->d_name).c_str());
-                else
-                    printf("  Failed to connect to keyboard device %s.\n", (path + dp->d_name).c_str());
+                if (device_index == num_keyboards)
+                {
+                    keyboard_device_name.push_back(full_pathname);
+                    keyboard_device_thread.push_back(NULL);
+                }
+    if (GLOBAL_DEBUG_VERBOSE) printf("      .. at line %d in %s\n", __LINE__, __FUNCTION__);
+    if (GLOBAL_DEBUG_VERBOSE) printf("       .. found keyboard dev %s\n", dp->d_name);
+                if (!keyboard_device_thread[device_index])
+                    keyboard_device_thread[device_index] = new std::thread(keyboard_thread_loop, device_index);
             }
+            keyboard_list_mutex.unlock();
         }
     }
     closedir(dirp);
 }
 
-static void do_main_loop()
+static void cleanup_threads()
 {
-    struct input_event evt;
+    keyboard_list_mutex.lock();
+    for (size_t i = 0; i < discarded_threads.size(); ++i)
+        discarded_threads[i]->join();
+    discarded_threads.clear();
+    keyboard_list_mutex.unlock();
+}
+
+static void find_devices_loop()
+{
     while (1)
     {
-if (GLOBAL_DEBUG_VERBOSE) printf("  ]] at line %d in %s\n", __LINE__, __FUNCTION__);
-        if (device_keyboard < 0)
-        {
-if (GLOBAL_DEBUG_VERBOSE) printf("    .. at line %d  (no keyboard)\n", __LINE__);
-            find_devices();
-            if (device_keyboard < 0)
-            {
-if (GLOBAL_DEBUG_VERBOSE) printf("    .. at line %d  (still no keyboard)\n", __LINE__);
-                usleep(2 * 1000 * 1000);
-            }
-        }
-        else
-        {
-            int read_result = read(device_keyboard, &evt, sizeof(evt));
-            if (read_result > 0)
-            {
-                handle_event(&evt);
-            }
-            else
-            {
-                // Lost the keyboard, lazily try to re-acquire it
-                printf("Lost keyboard connection.\n");
-                close(device_keyboard);
-                device_keyboard = -1;
-                usleep(2 * 1000 * 1000);
-            }
-        }
+        cleanup_threads();
+        find_devices();
+        // Would love to "sleep until new device connected" instead.
+        usleep(5 * 1000 * 1000);
     }
 }
 
 static void initialize()
 {
-    if (GLOBAL_DEBUG_VERBOSE) printf("  ]] at line %d in %s\n", __LINE__, __FUNCTION__);
     memset(backspace_hist_char, 0, sizeof(backspace_hist_char));
-    if (GLOBAL_DEBUG_VERBOSE) printf("  ]] at line %d in %s\n", __LINE__, __FUNCTION__);
 }
 
 int main()
@@ -586,7 +617,7 @@ int main()
     if (GLOBAL_DEBUG_VERBOSE) printf("]] at line %d in %s\n", __LINE__, __FUNCTION__);
     initialize();
     if (GLOBAL_DEBUG_VERBOSE) printf("]] at line %d in %s\n", __LINE__, __FUNCTION__);
-    do_main_loop();
+    find_devices_loop();
     if (GLOBAL_DEBUG_VERBOSE) printf("]] at line %d in %s\n", __LINE__, __FUNCTION__);
     return 0;
 }
