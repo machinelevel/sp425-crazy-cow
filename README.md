@@ -50,5 +50,15 @@ Just plug in a keyboard and start typing! Seriously, that's it.
 ## Where's the cursor?
 There is no visible cursor. Do not panic. Real typewriters don't have one either. If you type something in the wrong place, just `backspace`, or tap undo, or erase it with the stylus. Then (like a real typewriter) use `space`, `up`, `down`, `enter` to get to the right place.
 
+## It doesn't work with my keyboard...
+Here are the steps to troubleshoot this:
+1. Press the left/right arrow keys on your keyboard. This should change pages. (this is a built-in feature, not a Crazy Cow feature)
+
+    a. If the page does not change, there's a keyboard connection issue.
+
+    b. If the page does change, your keyboard is great, and you can go to step 2.
+    
+2. Please try [**this binary**](https://github.com/machinelevel/sp425-crazy-cow/tree/1-multiple-keyboards/bin) in the branch [1-multiple-keyboards](https://github.com/machinelevel/sp425-crazy-cow/tree/1-multiple-keyboards), to address more complex USB setups. I'm planning to merge this to main, if enough people verify that it solves their issues.
+
 ## If you find a bug
 Please post an issue. This is a just-for-fun project for me.
