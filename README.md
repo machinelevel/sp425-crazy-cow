@@ -31,7 +31,7 @@ I use my reMarkable tablet every day, for work and for personal stuff. I've spen
 1. copy **crazy-cow.service** to **/etc/systemd/system/**
 2. copy **crazy-cow** to **/home/root/**
 3. `ssh` to the tablet
-4. `systemctl start crazy-cow`
+4. `systemctl start crazy-cow` *(note that per #8 you might need to `chmod +x crazy-cow` to make it executable)*
 5. `systemctl enable crazy-cow` (to enable on boot)
 
 ## User's Manual
