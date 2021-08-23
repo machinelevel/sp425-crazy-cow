@@ -144,7 +144,7 @@ static void condition_strokes_interp(const int8_t* stroke_data, int num_strokes,
             fstrokes.push_back(-1);
             fstrokes.push_back(-1);
         }
-    }    
+    }
 }
 
 static void press_ui_button(int x, int y)
@@ -229,8 +229,8 @@ static void do_backspace()
         for (int i = 0; i < undo_count; ++i)
         {
             // TODO: Put these x,y into a settings file?
-            int undo_x = 50;
-            int undo_y = 12100;
+            int undo_x = 500;
+            int undo_y = 13600;
             press_ui_button(undo_x, undo_y);
             usleep(10 * 1000);
         }
