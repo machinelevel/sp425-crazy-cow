@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       run: |
         apt update
-        apt install make
+        apt install make arm-linux-gnueabihf-gcc
 
     - uses: actions/checkout@v2
 
