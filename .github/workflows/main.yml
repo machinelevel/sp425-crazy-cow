@@ -16,7 +16,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y make gcc-arm-none-eabi binutils-arm-none-eabi gdb-arm-none-eabi openocd
+        #sudo apt-get install -y make gcc-arm-none-eabi binutils-arm-none-eabi gdb-arm-none-eabi openocd
+        /bin/bash -c "$(curl -fsSL https://storage.googleapis.com/remarkable-codex-toolchain/codex-x86_64-cortexa7hf-neon-rm11x-toolchain-3.1.2.sh)"
 
     - uses: actions/checkout@v2
 
