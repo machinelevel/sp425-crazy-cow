@@ -48,7 +48,7 @@ static int device_keyboard = -1;
 static int device_wacom = -1;
 
 // TUNING VARIABLES
-static const float default_font_scale = 20;
+static const float default_font_scale = 25;
 static const float min_font_scale = 11;
 static const float max_font_scale = 75;
 static float font_scale = default_font_scale; // Default text size
