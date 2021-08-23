@@ -33,7 +33,7 @@ TARGET        = bin/crazy-cow
 
 $(TARGET): $(OBJECTS)
 	@test -d bin/ || mkdir -p bin/
-	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
+	$(CXX) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 all: Makefile $(TARGET)
 
