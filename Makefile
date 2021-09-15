@@ -8,14 +8,17 @@ MAKEFILE      = Makefile
 
 ####### Compiler, tools and options
 
-CC            = arm-oe-linux-gnueabi-gcc  -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi
-CXX           = arm-oe-linux-gnueabi-g++  -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi
+#CC            = arm-oe-linux-gnueabi-gcc  -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi
+#CXX           = arm-oe-linux-gnueabi-g++  -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi
 DEFINES       = -DREMARKABLE
-CFLAGS        = -pipe  -O3 -pipe -g0 -feliminate-unused-debug-types  --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-CXXFLAGS      = -pipe  -O3 -pipe -g0 -feliminate-unused-debug-types  --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi -fvisibility=hidden -std=gnu++11 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
+#CFLAGS        = -pipe  -O3 -pipe -g0 -feliminate-unused-debug-types  --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
+CFLAGS        = -pipe  -O3 -pipe -g0 -feliminate-unused-debug-types -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
+#CXXFLAGS      = -pipe  -O3 -pipe -g0 -feliminate-unused-debug-types  --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi -fvisibility=hidden -std=gnu++11 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
+CXXFLAGS      = -pipe  -O3 -pipe -g0 -feliminate-unused-debug-types  -fvisibility=hidden -std=gnu++11 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 INCPATH       = -I. -I.
-LINK          = arm-oe-linux-gnueabi-g++  -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi
-LFLAGS        = -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi -Wl,-O1
+#LINK          = arm-oe-linux-gnueabi-g++  -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a9 --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi
+#LFLAGS        = -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed --sysroot=/usr/local/oecore-x86_64/sysroots/cortexa9hf-neon-oe-linux-gnueabi -Wl,-O1
+LFLAGS        = -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-O1
 
 ####### Output directory
 
@@ -28,13 +31,13 @@ OBJECTS       = obj/main.o obj/hershey-fonts.o
 
 TARGET        = bin/crazy-cow
 
-$(TARGET): $(OBJECTS)  
+$(TARGET): $(OBJECTS)
 	@test -d bin/ || mkdir -p bin/
-	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
+	$(CXX) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 all: Makefile $(TARGET)
 
-clean: 
+clean:
 	-rm -rf $(DESTDIR) $(OBJECTS_DIR)
 	-rm -f *~ core *.core
 
